@@ -1,0 +1,22 @@
+# fly.toml file for Elevenytsmusic Bot
+
+app = "elevenytsmusic" # इसे अपने ऐप के लिए एक यूनिक नाम दें (केवल लोअरकेस, हाइफन)
+primary_region = "bom" # अपनी पसंद का रीजन कोड डालें (bom = Mumbai)
+
+[build]
+  # यह बताता है कि हमारे पास पहले से Dockerfile है
+  docker = "Dockerfile"
+
+[http_service]
+  # यह बॉट के लिए जरूरी नहीं है, क्योंकि यह वेब सर्वर नहीं है, लेकिन Fly.io इसे चाहता है।
+  # इसे निष्क्रिय कर दें।
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false # बॉट को हमेशा चलते रहना चाहिए
+  auto_start_machines = false
+
+[[vm]]
+  # मेमोरी और CPU सेटिंग्स (शुरुआत के लिए काफी है)
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
