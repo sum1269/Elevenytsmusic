@@ -1,6 +1,8 @@
 import asyncio
 import importlib
 import sys
+import os
+from aiohttp import web  # Add aiohttp to requirements.txt
 
 from pyrogram import idle
 
@@ -21,8 +23,32 @@ from Elevenyts import (tune, app, config, db,
 from Elevenyts.plugins import all_modules
 
 
+# Simple HTTP server for Render health checks
+async def health_check(request):
+    return web.Response(text="OK", status=200)
+
+
+async def start_http_server():
+    """Start a simple HTTP server on the port specified by Render"""
+    port = int(os.environ.get("PORT", 8080))  # Render sets PORT env variable
+    app_web = web.Application()
+    app_web.router.add_get("/", health_check)
+    app_web.router.add_get("/health", health_check)
+    
+    runner = web.AppRunner(app_web)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)  # Bind to all interfaces
+    await site.start()
+    logger.info(f"🌐 HTTP server started on port {port} for Render health checks")
+    return runner
+
+
 async def main():
+    http_runner = None
     try:
+        # Step 0: Start HTTP server for Render (must be first)
+        http_runner = await start_http_server()
+        
         # Step 1: Connect to MongoDB database
         await db.connect()
         
@@ -71,6 +97,10 @@ async def main():
     except Exception as e:
         logger.error(f"Critical error in main: {e}", exc_info=True)
         raise
+    finally:
+        # Cleanup HTTP server
+        if http_runner:
+            await http_runner.cleanup()
 
 
 if __name__ == "__main__":
