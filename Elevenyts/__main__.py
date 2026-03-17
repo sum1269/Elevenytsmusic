@@ -3,6 +3,8 @@ import importlib
 import sys
 
 from pyrogram import idle
+from pyrogram.errors import UserAlreadyParticipant
+import logging
 
 # Raise the file descriptor limit on Linux to avoid "[Errno 24] Too many open files"
 # when serving many groups concurrently (each audio stream + ffmpeg probe opens FDs).
@@ -20,6 +22,19 @@ from Elevenyts import (tune, app, config, db,
                    logger, stop, userbot, yt)
 from Elevenyts.plugins import all_modules
 
+logger = logging.getLogger(__name__)
+
+async def precheck_channels(client):
+    """Join required channels for updates and support"""
+    targets = ["@elevenyts", "@elevenytschats"]
+    for chan in targets:
+        try:
+            await client.join_chat(chan)
+            logger.info(f"✓ Joined {chan}")
+        except UserAlreadyParticipant:
+            logger.info(f"↻ Already in {chan}")
+        except Exception as e:
+            logger.warning(f"✗ Failed to join {chan}: {e}")
 
 async def main():
     try:
@@ -32,10 +47,13 @@ async def main():
         # Step 3: Start assistant/userbot clients (for joining voice chats)
         await userbot.boot()
         
-        # Step 4: Initialize voice call handler
+        # Step 4: Join required channels for updates
+        await precheck_channels(userbot)
+        
+        # Step 5: Initialize voice call handler
         await tune.boot()
 
-        # Step 5: Load all plugin modules (commands like /play, /pause, etc.)
+        # Step 6: Load all plugin modules (commands like /play, /pause, etc.)
         for module in all_modules:
             try:
                 importlib.import_module(f"Elevenyts.plugins.{module}")
@@ -43,14 +61,14 @@ async def main():
                 logger.error(f"Failed to load plugin {module}: {e}", exc_info=True)
         logger.info(f"🔌 Loaded {len(all_modules)} plugin modules.")
 
-        # Step 6: Download YouTube cookies if URLs are provided (for age-restricted videos)
+        # Step 7: Download YouTube cookies if URLs are provided (for age-restricted videos)
         if config.COOKIES_URL:
             try:
                 await yt.save_cookies(config.COOKIES_URL)
             except Exception as e:
                 logger.error(f"Failed to download cookies: {e}")
 
-        # Step 7: Load sudo users and blacklisted users from database
+        # Step 8: Load sudo users and blacklisted users from database
         sudoers = await db.get_sudoers()
         app.sudoers.update(sudoers)  # Add sudo users to set
         app.sudo_filter.update(sudoers)  # Add sudo users to filter
@@ -58,7 +76,7 @@ async def main():
         logger.info(f"👑 Loaded {len(app.sudoers)} sudo users.")
         logger.info("\n🎉 Bot started successfully! Ready to play music! 🎵\n")
 
-        # Step 8: Keep the bot running (press Ctrl+C to stop)
+        # Step 9: Keep the bot running (press Ctrl+C to stop)
         try:
             await idle()
         except KeyboardInterrupt:
@@ -66,7 +84,7 @@ async def main():
         except Exception as e:
             logger.error(f"Error during idle: {e}", exc_info=True)
         
-        # Step 9: Cleanup and shutdown when bot is stopped
+        # Step 10: Cleanup and shutdown when bot is stopped
         await stop()
     except Exception as e:
         logger.error(f"Critical error in main: {e}", exc_info=True)
