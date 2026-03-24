@@ -23,32 +23,32 @@ from Elevenyts.plugins import all_modules
 
 async def main():
     try:
-        # Step 1: Connect to MongoDB database
+        # Step 1: Validate required environment variables
+        try:
+            config.check()
+        except SystemExit as e:
+            logger.error(str(e))
+            return
+
+        # Step 2: Connect to MongoDB database
         await db.connect()
         
-        # Step 2: Start the main bot client
+        # Step 3: Start the main bot client
         await app.boot()
         
-        # Step 3: Start assistant/userbot clients (for joining voice chats)
+        # Step 4: Start assistant/userbot clients (for joining voice chats)
         await userbot.boot()
         
-        # Step 4: Initialize voice call handler
+        # Step 5: Initialize voice call handler
         await tune.boot()
 
-        # Step 5: Load all plugin modules (commands like /play, /pause, etc.)
+        # Step 6: Load all plugin modules (commands like /play, /pause, etc.)
         for module in all_modules:
             try:
                 importlib.import_module(f"Elevenyts.plugins.{module}")
             except Exception as e:
                 logger.error(f"Failed to load plugin {module}: {e}", exc_info=True)
         logger.info(f"🔌 Loaded {len(all_modules)} plugin modules.")
-
-        # Step 6: Download YouTube cookies if URLs are provided (for age-restricted videos)
-        if config.COOKIES_URL:
-            try:
-                await yt.save_cookies(config.COOKIES_URL)
-            except Exception as e:
-                logger.error(f"Failed to download cookies: {e}")
 
         # Step 7: Load sudo users and blacklisted users from database
         sudoers = await db.get_sudoers()
@@ -88,6 +88,7 @@ if __name__ == "__main__":
     finally:
         # Ensure cleanup happens
         try:
+            loop = asyncio.get_event_loop()
             if loop.is_running():
                 loop.stop()
         except:
