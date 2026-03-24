@@ -72,9 +72,9 @@ class Config:
         # Enable/disable thumbnail generation (set False to use default thumb)
         self.THUMB_GEN: bool = self._str_to_bool(getenv("THUMB_GEN", "True"))
 
-        # ============ YOUTUBE COOKIES ============
-        # Parse space-separated cookie URLs for age-restricted content
-        self.COOKIES_URL: List[str] = self._parse_cookies()
+        # ============ API CONFIGURATION ============
+        # YouTube API URL for downloading (replaces cookies)
+        self.YOUTUBE_API_URL: str = getenv("YOUTUBE_API_URL", "https://shrutibots.site")
 
         # ============ IMAGE URLS ============
         # URLs for various bot images
@@ -110,25 +110,6 @@ class Config:
             if chat_id.lstrip('-').isdigit():
                 chat_ids.append(int(chat_id))
         return chat_ids
-
-    def _parse_cookies(self) -> List[str]:
-        """
-        Parse YouTube cookie URLs from space-separated string.
-        Supports multiple cookie sources (batbin, pastebin, etc.)
-
-        Returns:
-            List[str]: List of valid cookie URLs.
-        """
-        cookie_str = getenv("COOKIE_URL", "")
-        if not cookie_str:
-            return []
-
-        valid_sources = ["batbin.me", "pastebin.com", "paste.ee", "rentry.co"]
-        return [
-            url.strip()
-            for url in cookie_str.split()
-            if url.strip() and any(source in url for source in valid_sources)
-        ]
 
     @staticmethod
     def _str_to_bool(value: str) -> bool:
